@@ -43,3 +43,7 @@ Thumbs.db
 .gopath/
 .golangci-cache/
 .tmp_repro/
+
+# Nix
+result
+result-*

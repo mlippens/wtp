@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/satococoa/wtp/v2/internal/command"
 	"github.com/satococoa/wtp/v2/internal/config"
 	"github.com/satococoa/wtp/v2/internal/errors"
+	"github.com/satococoa/wtp/v2/internal/testutil"
 )
 
 // ===== Command Structure Tests =====
@@ -691,8 +693,31 @@ func TestAddCommand_SimplifiedInterface(t *testing.T) {
 	})
 }
 
+func runGitInDir(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	gitCmd := exec.Command("git", args...)
+	gitCmd.Dir = dir
+	output, err := gitCmd.CombinedOutput()
+	require.NoError(t, err, "git %v failed: %s", args, output)
+}
+
+func chdirToNewTestRepo(t *testing.T) {
+	t.Helper()
+
+	repoDir := t.TempDir()
+	runGitInDir(t, repoDir, "init")
+	testutil.ConfigureTestRepo(t, repoDir, func(dir string, args ...string) {
+		runGitInDir(t, dir, args...)
+	})
+	runGitInDir(t, repoDir, "commit", "--allow-empty", "-m", "initial commit")
+	t.Chdir(repoDir)
+}
+
 func TestAddCommand_Integration(t *testing.T) {
 	t.Run("should coordinate all components successfully", func(t *testing.T) {
+		chdirToNewTestRepo(t)
+
 		// Given: a CLI command with proper setup
 		app := &cli.Command{
 			Name: "test",
